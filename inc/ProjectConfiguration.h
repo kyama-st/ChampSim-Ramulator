@@ -14,14 +14,15 @@
 #define MEMORY_USE_HYBRID                          (ENABLE) // whether use hybrid memory system instead of single memory systems
 #define PRINT_STATISTICS_INTO_FILE                 (ENABLE) // whether print simulation statistics into files
 #define PRINT_MEMORY_TRACE                         (DISABLE) // whether print memory trace into files
-#define MEMORY_USE_SWAPPING_UNIT                   (DISABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
-#define MEMORY_USE_OS_TRANSPARENT_MANAGEMENT       (DISABLE) // whether memory controller uses OS-transparent management designs to simulate the memory system instead of static (no-migration) methods
+#define MEMORY_USE_SWAPPING_UNIT                   (ENABLE) // whether memory controller uses swapping unit to swap data (data swapping overhead is considered)
+#define MEMORY_USE_OS_TRANSPARENT_MANAGEMENT       (ENABLE) // whether memory controller uses OS-transparent management designs to simulate the memory system instead of static (no-migration) methods
 #define CPU_USE_MULTIPLE_CORES                     (DISABLE) // whether CPU uses multiple cores to run simulation (go to ./inc/ChampSim/champsim_constants.h to check related parameters)
 
 #if (MEMORY_USE_HYBRID == ENABLE)
 #define NUMBER_OF_MEMORIES   (2u)    // we use two memories for hybrid memory system.
 #define MEMORY_NUMBER_ONE    (0u)
 #define MEMORY_NUMBER_TWO    (1u)
+#define ADD_HBM_128MB        (ENABLE)
 #else
 #define NUMBER_OF_MEMORIES   (1u)
 
@@ -45,10 +46,15 @@
 
 #if (IDEAL_LINE_LOCATION_TABLE == ENABLE) || (COLOCATED_LINE_LOCATION_TABLE == ENABLE)
 #define HOTNESS_THRESHOLD                     (1u)
+#define BITS_MANIPULATION                     (DISABLE)
 #elif (IDEAL_VARIABLE_GRANULARITY == ENABLE)
-#define HOTNESS_THRESHOLD                     (1u)
+#define HOTNESS_THRESHOLD                     (1u)      // default: 1/4
 #define DATA_EVICTION                         (ENABLE)
-#define FLEXIBLE_DATA_PLACEMENT               (DISABLE)
+#define FLEXIBLE_DATA_PLACEMENT               (ENABLE)
+#define STATISTICS_INFORMATION                (ENABLE)
+#define FLEXIBLE_GRANULARITY                  (ENABLE)
+#define IMMEDIATE_EVICTION                    (DISABLE)
+#define COLD_DATA_DETECTION_IN_GROUP          (DISABLE)
 #else
 #define HOTNESS_THRESHOLD                     (1u)
 #endif  // IDEAL_LINE_LOCATION_TABLE, COLOCATED_LINE_LOCATION_TABLE, IDEAL_VARIABLE_GRANULARITY
@@ -57,6 +63,10 @@
 #error OS-transparent management designs need to be enabled.
 #endif  // IDEAL_LINE_LOCATION_TABLE, COLOCATED_LINE_LOCATION_TABLE
 #endif  // MEMORY_USE_OS_TRANSPARENT_MANAGEMENT
+
+#if (PRINT_MEMORY_TRACE == ENABLE)
+#define CONTINUOUS_ADDRESS                    (ENABLE)
+#endif  // PRINT_MEMORY_TRACE
 
 // Data block management granularity
 #define DATA_GRANULARITY_64B                (64u)
@@ -132,6 +142,10 @@
 //#define CPU_L1I_PREFETCHER             (CACHE::pref_t::CPU_REDIRECT_pprefetcherDnext_line_instr_)
 #endif  // INSTRUCTION_PREFETCHER
 
+#if (USE_OPENMP == ENABLE)
+#define SET_THREADS_NUMBER             (6)
+#endif  // USE_OPENMP
+
 #define KB (1024ul) // unit is byte
 #define MB (KB*KB)
 #define GB (MB*KB)
@@ -185,13 +199,19 @@ typedef struct
     uint64_t read_request_in_memory, read_request_in_memory2;
     uint64_t write_request_in_memory, write_request_in_memory2;
 
+    uint64_t swapping_count;
+    uint64_t swapping_traffic_in_bytes;
+
     uint64_t remapping_request_queue_congestion;
+
+#if (IDEAL_VARIABLE_GRANULARITY == ENABLE)
     uint64_t no_free_space_for_migration;
     uint64_t no_invalid_group_for_migration;
     uint64_t unexpandable_since_start_address;
     uint64_t unexpandable_since_no_invalid_group;
     uint64_t data_eviction_success, data_eviction_failure;
     uint64_t uncertain_counter;
+#endif  // IDEAL_VARIABLE_GRANULARITY
 
 } OutputChampSimStatisticsFileType;
 
